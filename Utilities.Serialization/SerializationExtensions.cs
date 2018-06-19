@@ -123,11 +123,15 @@ namespace Utilities.Serialization
 
             try
             {
+                //Try to deserialize
                 return JsonConvert.DeserializeObject<T>(value);
             }
             catch (Exception)
             {
-                return (T)Convert.ChangeType(value, typeof(T));
+                //Change type to string if there is an exception and type of T is string
+                if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(value, typeof(T));
+                //Otherwise return default of T
+                else return default(T);
             }
         }
 

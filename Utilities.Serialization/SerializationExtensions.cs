@@ -99,8 +99,6 @@ namespace Utilities.Serialization
         /// <returns>Deserialized object</returns>
         public static T Deserialize<T>(this string value, SerializationTypes serializationType)
         {
-            if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(value,typeof(T));
-
             switch (serializationType)
             {
                 case SerializationTypes.Default:
@@ -123,7 +121,14 @@ namespace Utilities.Serialization
         {
             if (string.IsNullOrEmpty(value)) return default(T);
 
-            return JsonConvert.DeserializeObject<T>(value);
+            try
+            {
+                return JsonConvert.DeserializeObject<T>(value);
+            }
+            catch (Exception)
+            {
+                return (T)Convert.ChangeType(value, typeof(T));
+            }
         }
 
         /// <summary>

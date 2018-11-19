@@ -18,6 +18,11 @@
         /// <summary>
         /// Xml
         /// </summary>
-        Xml = 2
+        Xml = 2,
+
+        /// <summary>
+        /// Bson
+        /// </summary>
+        Bson = 3
     }
 }

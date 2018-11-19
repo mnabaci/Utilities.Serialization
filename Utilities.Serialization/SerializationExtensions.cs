@@ -7,6 +7,8 @@ using Utilities.Serialization.Options;
 
 namespace Utilities.Serialization
 {
+    using Newtonsoft.Json.Bson;
+
     /// <summary>
     /// Serialization extension
     /// </summary>
@@ -39,6 +41,8 @@ namespace Utilities.Serialization
                     return value.SerializeToJson();
                 case SerializationTypes.Xml:
                     return value.SerializeToXml();
+                case SerializationTypes.Bson:
+                    return value.SerializeToBson();
                 default:
                     return string.Empty;
             }
@@ -66,15 +70,35 @@ namespace Utilities.Serialization
         private static string SerializeToXml<T>(this T value)
         {
             if (value == null) return string.Empty;
-
-            var xmlSerializer = new XmlSerializer(typeof(T));
-
+            
             using (var sw = new StringWriter())
             {
                 using (var writer = XmlWriter.Create(sw))
                 {
+                    var xmlSerializer = new XmlSerializer(typeof(T));
                     xmlSerializer.Serialize(writer, value);
                     return sw.ToString();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Serialize object to bson string
+        /// </summary>
+        /// <typeparam name="T">Object type</typeparam>
+        /// <param name="value">Value will be serialized</param>
+        /// <returns>Serialized bson string</returns>
+        private static string SerializeToBson<T>(this T value)
+        {
+            if (value == null) return string.Empty;
+
+            using (var ms = new MemoryStream())
+            {
+                using (var writer = new BsonDataWriter(ms))
+                {
+                    var serializer = new JsonSerializer();
+                    serializer.Serialize(writer, value);
+                    return Convert.ToBase64String(ms.ToArray());
                 }
             }
         }
@@ -106,6 +130,8 @@ namespace Utilities.Serialization
                     return value.DeserializeFromJson<T>();
                 case SerializationTypes.Xml:
                     return value.DeserializeFromXml<T>();
+                case SerializationTypes.Bson:
+                    return value.DeserializeFromBson<T>();
                 default:
                     return default(T);
             }
@@ -154,6 +180,37 @@ namespace Utilities.Serialization
                     var deserialized = xmlSerializer.Deserialize(reader);
                     return (T)Convert.ChangeType(deserialized, typeof(T));
                 }
+            }
+        }
+
+        /// <summary>
+        /// Deserialize bson string to given object type
+        /// </summary>
+        /// <typeparam name="T">Object type</typeparam>
+        /// <param name="value">Value will be deserialized</param>
+        /// <returns>Deserialized object</returns>
+        private static T DeserializeFromBson<T>(this string value)
+        {
+            if (string.IsNullOrEmpty(value)) return default(T);
+
+            try
+            {
+                var data = Convert.FromBase64String(value);
+                using (var ms = new MemoryStream(data))
+                {
+                    using (var reader = new BsonDataReader(ms))
+                    {
+                        var serializer = new JsonSerializer();
+                        return serializer.Deserialize<T>(reader);
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                //Change type to string if there is an exception and type of T is string
+                if (typeof(T) == typeof(string)) return (T)Convert.ChangeType(value, typeof(T));
+                //Otherwise return default of T
+                else return default(T);
             }
         }
     }
